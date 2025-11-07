@@ -1,4 +1,3 @@
-
 # 🖐️ American Sign Language Recognition using MediaPipe and TensorFlow
 
 This project uses **MediaPipe Hand Landmarks** and a **Neural Network** built with **TensorFlow** to recognize American Sign Language (ASL) alphabet gestures in real time from a webcam feed.
