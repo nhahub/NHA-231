@@ -410,13 +410,20 @@ def main():
                 break
 
         # Release resources safely
-        if cap.isOpened():
+        # Release resources safely
+        if 'cap' in locals() and cap.isOpened():
             cap.release()
-        try:
-            hands.close()
-        except ValueError:
-            pass
+        
+        # Close MediaPipe safely
+        if 'hands' in locals():
+            try:
+                if getattr(hands, "_graph", None) is not None:
+                    hands.close()
+            except Exception:
+                pass  # Ignore if it's already closed or not initialized
+        
         status_placeholder.info("📷 Camera stopped")
+        
 
 
 
