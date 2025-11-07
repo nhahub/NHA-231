@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import mediapipe as mp
 import pickle
-from tensorflow.keras.models import load_model  # type: ignore
+from tensorflow.keras.models import load_model
 import time
 from PIL import Image
 
@@ -131,7 +131,8 @@ def process_frame(
                 hand_landmarks,
                 mp_hands.HAND_CONNECTIONS,
                 mp_drawing.DrawingSpec(
-                    color=(0, 255, 0), thickness=2, circle_radius=2),
+                    color=(0, 255, 0), thickness=2, circle_radius=2
+                ),
                 mp_drawing.DrawingSpec(color=(255, 255, 255), thickness=2),
             )
 
@@ -163,19 +164,21 @@ def process_frame(
 
             # Display prediction on frame
             text = f"{predicted_class}: {confidence*100:.1f}%"
-            text_size = cv2.getTextSize(
-                text, cv2.FONT_HERSHEY_SIMPLEX, 1.5, 3)[0]
-            cv2.rectangle(frame, (10, 10),
-                          (20 + text_size[0], 60), (0, 0, 0), -1)
+            text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 1.5, 3)[0]
+            cv2.rectangle(frame, (10, 10), (20 + text_size[0], 60), (0, 0, 0), -1)
 
             color = (0, 255, 0) if confidence > 0.7 else (0, 255, 255)
-            cv2.putText(frame, text, (15, 50),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1.5, color, 3)
+            cv2.putText(frame, text, (15, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, color, 3)
     else:
         # No hand detected
         cv2.putText(
-            frame, "NOTHING", (15,
-                               50), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 255), 3
+            frame,
+            "NOTHING",
+            (15, 50),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1.5,
+            (0, 255, 255),
+            3,
         )
         cv2.putText(
             frame,
@@ -298,8 +301,7 @@ def main():
                 st.session_state.model = model
                 st.session_state.class_names = class_names
                 st.session_state.model_loaded = True
-                st.success(
-                    f"✅ Model loaded successfully! Classes: {len(class_names)}")
+                st.success(f"✅ Model loaded successfully! Classes: {len(class_names)}")
             else:
                 st.error("❌ Failed to load model. Check the file paths.")
 
@@ -331,82 +333,85 @@ def main():
         frame_count = 0
         start_time = time.time()
 
-        while st.session_state.camera_running:
-            ret, frame = cap.read()
-            if not ret:
-                status_placeholder.error("❌ Failed to grab frame")
-                break
+        try:
+            while st.session_state.camera_running:
+                ret, frame = cap.read()
+                if not ret:
+                    status_placeholder.error("❌ Failed to grab frame")
+                    break
 
-            # Process frame
-            processed_frame, predicted_class, confidence, top3_predictions = (
-                process_frame(
-                    frame,
-                    hands,
-                    st.session_state.model,
-                    st.session_state.class_names,
-                    mp_hands,
-                    mp_drawing,
-                    st.session_state.prediction_history,
-                    history_size,
+                # Process frame
+                processed_frame, predicted_class, confidence, top3_predictions = (
+                    process_frame(
+                        frame,
+                        hands,
+                        st.session_state.model,
+                        st.session_state.class_names,
+                        mp_hands,
+                        mp_drawing,
+                        st.session_state.prediction_history,
+                        history_size,
+                    )
                 )
-            )
 
-            # Convert BGR to RGB for display
-            processed_frame_rgb = cv2.cvtColor(
-                processed_frame, cv2.COLOR_BGR2RGB)
-            video_placeholder.image(
-                processed_frame_rgb, channels="RGB", use_column_width=True
-            )
+                # Convert BGR to RGB for display
+                processed_frame_rgb = cv2.cvtColor(processed_frame, cv2.COLOR_BGR2RGB)
+                video_placeholder.image(
+                    processed_frame_rgb, channels="RGB", use_column_width=True
+                )
 
-            # Update predictions
-            with prediction_placeholder.container():
-                if predicted_class != "NOTHING":
-                    conf_class = (
-                        "confidence-high" if confidence > 0.7 else "confidence-low"
-                    )
-                    st.markdown(
-                        f"""
-                    <div class="prediction-box">
-                        <h2 style="margin:0; color: #1E88E5;">🤟 {predicted_class}</h2>
-                        <p style="font-size: 1.5rem; margin:10px 0 0 0;" class="{conf_class}">
-                            Confidence: {confidence*100:.1f}%
-                        </p>
-                    </div>
-                    """,
-                        unsafe_allow_html=True,
-                    )
-                else:
-                    st.info("👋 No hand detected - Show a hand sign!")
+                # Update predictions
+                with prediction_placeholder.container():
+                    if predicted_class != "NOTHING":
+                        conf_class = (
+                            "confidence-high" if confidence > 0.7 else "confidence-low"
+                        )
+                        st.markdown(
+                            f"""
+                        <div class="prediction-box">
+                            <h2 style="margin:0; color: #1E88E5;">🤟 {predicted_class}</h2>
+                            <p style="font-size: 1.5rem; margin:10px 0 0 0;" class="{conf_class}">
+                                Confidence: {confidence*100:.1f}%
+                            </p>
+                        </div>
+                        """,
+                            unsafe_allow_html=True,
+                        )
+                    else:
+                        st.info("👋 No hand detected - Show a hand sign!")
 
-            # Show top 3 predictions
-            if top3_predictions:
-                with top3_placeholder.container():
-                    st.markdown("**Top 3 Predictions:**")
-                    for i, (label, conf) in enumerate(top3_predictions, 1):
-                        st.write(f"{i}. **{label}**: {conf*100:.1f}%")
+                # Show top 3 predictions
+                if top3_predictions:
+                    with top3_placeholder.container():
+                        st.markdown("**Top 3 Predictions:**")
+                        for i, (label, conf) in enumerate(top3_predictions, 1):
+                            st.write(f"{i}. **{label}**: {conf*100:.1f}%")
 
-            # Stats
-            frame_count += 1
-            elapsed_time = time.time() - start_time
-            fps = frame_count / elapsed_time if elapsed_time > 0 else 0
+                # Stats
+                frame_count += 1
+                elapsed_time = time.time() - start_time
+                fps = frame_count / elapsed_time if elapsed_time > 0 else 0
 
-            with stats_placeholder.container():
-                st.markdown("---")
-                col_stat1, col_stat2 = st.columns(2)
-                col_stat1.metric("FPS", f"{fps:.1f}")
-                col_stat2.metric("Frames", frame_count)
+                with stats_placeholder.container():
+                    st.markdown("---")
+                    col_stat1, col_stat2 = st.columns(2)
+                    col_stat1.metric("FPS", f"{fps:.1f}")
+                    col_stat2.metric("Frames", frame_count)
 
-            # Small delay
-            time.sleep(0.03)
+                # Small delay
+                time.sleep(0.03)
 
-            # Check if stop button was pressed
-            if not st.session_state.camera_running:
-                break
+                # Check if stop button was pressed
+                if not st.session_state.camera_running:
+                    break
 
-        # Release camera
-        cap.release()
-        hands.close()
-        status_placeholder.info("📷 Camera stopped")
+        finally:
+            # Always cleanup resources, even if there's an error
+            if 'cap' in locals() and cap is not None:
+                cap.release()
+            if 'hands' in locals() and hands is not None:
+                hands.close()
+            status_placeholder.info("📷 Camera stopped")
 
 
 if __name__ == "__main__":
