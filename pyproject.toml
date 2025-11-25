@@ -13,6 +13,6 @@ dependencies = [
     "opencv-python>=4.11.0.86",
     "pandas>=2.3.3",
     "scikit-learn>=1.7.2",
-    "tensorflow>=2.18.1",
+    "tensorflow[and-cuda]>=2.18.1",
     "tqdm>=4.67.1",
 ]
