@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Sign Language Translator Client</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        :root {
+            --primary-color: #4f46e5;
+            --secondary-color: #10b981;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        #video-feed {
+            transform: scaleX(-1); /* Mirror the video for natural user experience */
+            width: 100%;
+            max-width: 100%;
+            height: auto;
+            border: 4px solid var(--primary-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        #status-indicator {
+            transition: background-color 0.3s;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen flex items-center justify-center">
+
+    <div class="w-full max-w-4xl bg-white rounded-xl shadow-2xl p-6 md:p-10">
+        <h1 class="text-3xl font-extrabold text-gray-900 mb-2 flex items-center">
+            <svg class="w-8 h-8 mr-3 text-red-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M4 2a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2H4zm11 11a1 1 0 100-2 1 1 0 000 2zm-4-3a1 1 0 100-2 1 1 0 000 2zm-4 3a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"></path></svg>
+            Sign Language Translator
+        </h1>
+        <p class="text-gray-500 mb-6">Real-time prediction using WebSockets and an ML model (Server Mocked).</p>
+
+        <!-- Connection Status -->
+        <div class="flex items-center space-x-2 mb-6">
+            <div id="status-indicator" class="w-3 h-3 rounded-full bg-gray-400"></div>
+            <p id="connection-status" class="text-sm font-medium text-gray-700">Connecting to WebSocket...</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Video Feed -->
+            <div class="lg:col-span-2">
+                <h2 class="text-xl font-semibold text-gray-800 mb-3">Live Camera Feed</h2>
+                <video id="video-feed" autoplay playsinline class="bg-gray-200"></video>
+                <div id="loading-message" class="text-center p-4 text-gray-500 hidden">
+                    <p>Loading camera feed... please grant permission.</p>
+                </div>
+            </div>
+
+            <!-- Prediction and Sentence Output -->
+            <div class="lg:col-span-1 space-y-6">
+                
+                <!-- Real-time Prediction -->
+                <div class="bg-indigo-50 border border-indigo-200 p-4 rounded-lg shadow-inner">
+                    <h2 class="text-xl font-semibold text-indigo-700 mb-2">Current Prediction</h2>
+                    <div id="current-prediction" class="text-7xl font-black text-indigo-900 text-center p-4 bg-white rounded-md shadow-md h-24 flex items-center justify-center">
+                        ?
+                    </div>
+                </div>
+
+                <!-- Sentence Builder -->
+                <div class="bg-green-50 border border-green-200 p-4 rounded-lg shadow-inner">
+                    <h2 class="text-xl font-semibold text-green-700 mb-2 flex justify-between items-center">
+                        <span>Sentence Builder</span>
+                        <button id="add-space-btn" class="px-3 py-1 bg-green-500 text-white text-sm font-medium rounded-full hover:bg-green-600 transition duration-150 shadow-md">
+                            Add Space
+                        </button>
+                    </h2>
+                    <div id="sentence-output" class="min-h-32 p-3 bg-white border border-green-300 rounded-md shadow-inner text-lg font-medium text-gray-800 overflow-y-auto break-words">
+                        (Sentence will appear here...)
+                    </div>
+                    <button id="clear-sentence-btn" class="mt-3 w-full px-4 py-2 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition duration-150 shadow-md">
+                        Clear Sentence
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Hidden Canvas for frame processing -->
+        <canvas id="frame-canvas" class="hidden"></canvas>
+    </div>
+
+    <script>
+        // Configuration
+        const WEBSOCKET_URL = "ws://localhost:8080/sign-model"; // REPLACE with your actual server URL
+        const FRAME_SEND_INTERVAL = 100; // Send 10 frames per second (100ms interval)
+        const CANVAS_WIDTH = 320; // Resolution to send to the server
+        const CANVAS_HEIGHT = 240;
+
+        // DOM Elements
+        const videoElement = document.getElementById('video-feed');
+        const canvasElement = document.getElementById('frame-canvas');
+        const ctx = canvasElement.getContext('2d');
+        const statusIndicator = document.getElementById('status-indicator');
+        const connectionStatus = document.getElementById('connection-status');
+        const currentPrediction = document.getElementById('current-prediction');
+        const sentenceOutput = document.getElementById('sentence-output');
+        const loadingMessage = document.getElementById('loading-message');
+        const addSpaceBtn = document.getElementById('add-space-btn');
+        const clearSentenceBtn = document.getElementById('clear-sentence-btn');
+
+        // State
+        let ws = null;
+        let isCameraReady = false;
+        let isWsOpen = false;
+        let frameIntervalId = null;
+        let lastPredictedChar = '';
+        let sentence = '';
+
+        // --- Utility Functions ---
+
+        function updateStatus(isOpen, message) {
+            isWsOpen = isOpen;
+            connectionStatus.textContent = message;
+            statusIndicator.style.backgroundColor = isOpen ? 'var(--secondary-color)' : (message.includes('Error') ? '#dc2626' : '#f59e0b');
+        }
+
+        function handleError(source, error) {
+            console.error(`${source} Error:`, error);
+            const msg = `ERROR: ${source} failed. Check console.`;
+            updateStatus(false, msg);
+            currentPrediction.textContent = 'X';
+        }
+
+        // --- Camera Setup ---
+
+        async function setupCamera() {
+            loadingMessage.classList.remove('hidden');
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: CANVAS_WIDTH, height: CANVAS_HEIGHT } });
+                videoElement.srcObject = stream;
+                
+                await new Promise(resolve => videoElement.onloadedmetadata = resolve);
+                
+                // Set canvas size to match the stream resolution
+                canvasElement.width = videoElement.videoWidth;
+                canvasElement.height = videoElement.videoHeight;
+
+                isCameraReady = true;
+                loadingMessage.classList.add('hidden');
+                console.log("Camera ready. Starting connection.");
+                setupWebSocket();
+            } catch (error) {
+                handleError('Camera', 'Access Denied or Not Found.');
+                loadingMessage.innerHTML = '<p class="text-red-600">Camera access failed. Please ensure you have a camera and grant permission.</p>';
+            }
+        }
+
+        // --- Frame Processing ---
+
+        function sendFrame() {
+            if (!isCameraReady || !isWsOpen) return;
+
+            // 1. Draw the current video frame onto the canvas
+            ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+
+            // 2. Convert canvas image to Base64 (JPEG format for lighter payload)
+            // 'image/jpeg' is usually faster and smaller than 'image/png'
+            const imageData = canvasElement.toDataURL('image/jpeg', 0.8);
+
+            // 3. Send the image data over the WebSocket
+            try {
+                // We send the raw Base64 string (after 'data:image/jpeg;base64,' part)
+                const base64Data = imageData.split(',')[1];
+                ws.send(base64Data);
+                // console.log("Frame sent:", base64Data.substring(0, 30) + '...');
+            } catch (e) {
+                console.warn("Failed to send frame (WS might be closing):", e);
+            }
+        }
+
+        // --- Sentence Building Logic ---
+
+        function handleServerResponse(data) {
+            // This function handles the message received from the server.
+            // data is expected to be a single predicted character string (e.g., "A", "B", "Hello").
+            
+            const predictedChar = data.toUpperCase();
+
+            // Ignore non-alphanumeric/non-space characters for basic sentence building
+            if (!/^[A-Z0-9 ]$/.test(predictedChar)) {
+                 currentPrediction.textContent = predictedChar;
+                 return; // Ignore garbage predictions
+            }
+
+            currentPrediction.textContent = predictedChar;
+
+            // Simple debounce logic: only add the character if it's different from the last one
+            // This prevents adding the same character repeatedly while holding a sign.
+            if (predictedChar !== ' ' && predictedChar !== lastPredictedChar) {
+                sentence += predictedChar;
+                sentenceOutput.textContent = sentence;
+                lastPredictedChar = predictedChar;
+            } else if (predictedChar === ' ' && lastPredictedChar !== ' ') {
+                // If the prediction is a space and the last one wasn't, add a space
+                sentence += ' ';
+                sentenceOutput.textContent = sentence;
+                lastPredictedChar = ' ';
+            }
+        }
+
+        function mockServerResponse() {
+            // MOCK FUNCTION: Simulates server processing and response latency.
+            // Replace the actual ws.onmessage logic with a simple handler that calls handleServerResponse(receivedData)
+            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const randomChar = characters.charAt(Math.floor(Math.random() * characters.length));
+            
+            // Simulate 50ms processing delay
+            setTimeout(() => {
+                handleServerResponse(randomChar);
+            }, 50); 
+        }
+
+        // --- WebSocket Setup ---
+
+        function setupWebSocket() {
+            // Check if connection is already open or being established
+            if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+                return;
+            }
+
+            updateStatus(false, `Attempting to connect to ${WEBSOCKET_URL}...`);
+            ws = new WebSocket(WEBSOCKET_URL);
+
+            ws.onopen = () => {
+                updateStatus(true, `Connected to ${WEBSOCKET_URL}. Sending frames.`);
+                // Start sending frames on a fixed interval
+                if (frameIntervalId) clearInterval(frameIntervalId);
+                frameIntervalId = setInterval(sendFrame, FRAME_SEND_INTERVAL);
+            };
+
+            ws.onmessage = (event) => {
+                // IMPORTANT: Replace the mockServerResponse with direct call to handleServerResponse(event.data)
+                // when connecting to a real server.
+                // For this demo, we mock the prediction since the connection to localhost:8080 will likely fail.
+
+                // ---> START OF REAL SERVER LOGIC
+                // handleServerResponse(event.data); 
+                // <--- END OF REAL SERVER LOGIC
+
+                // ---> START OF MOCK LOGIC (Remove this block for real use)
+                mockServerResponse();
+                // <--- END OF MOCK LOGIC
+
+            };
+
+            ws.onerror = (error) => {
+                handleError('WebSocket', 'Connection Failed or Server Offline.');
+                // Try to reconnect after a delay
+                setTimeout(setupWebSocket, 3000); 
+            };
+
+            ws.onclose = () => {
+                updateStatus(false, 'Disconnected from server. Attempting to reconnect...');
+                clearInterval(frameIntervalId);
+                frameIntervalId = null;
+                // Try to reconnect after a delay
+                setTimeout(setupWebSocket, 3000); 
+            };
+        }
+
+        // --- Event Listeners ---
+
+        addSpaceBtn.addEventListener('click', () => {
+            if (sentence.length > 0 && sentence.slice(-1) !== ' ') {
+                sentence += ' ';
+                sentenceOutput.textContent = sentence;
+                lastPredictedChar = ' ';
+            }
+        });
+
+        clearSentenceBtn.addEventListener('click', () => {
+            sentence = '';
+            lastPredictedChar = '';
+            sentenceOutput.textContent = '(Sentence cleared...)';
+            currentPrediction.textContent = '?';
+        });
+
+        // --- Initialization ---
+        window.onload = () => {
+            setupCamera();
+            sentenceOutput.textContent = sentence; // Initialize sentence display
+        };
+    </script>
+</body>
+</html>

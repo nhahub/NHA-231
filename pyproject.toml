@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "dagshub>=0.6.3",
-    "fastrtc>=0.0.34",
+    "fastapi[standard]>=0.122.0",
     "matplotlib>=3.10.7",
     "mediapipe>=0.10.21",
     "mlflow>=3.6.0",
