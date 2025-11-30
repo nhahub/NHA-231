@@ -9,7 +9,7 @@ A real-time American Sign Language (ASL) alphabet translator application that us
 - **Client-Server Architecture:** Decoupled frontend and backend communicating via WebSockets.
 - **Advanced Computer Vision:** Utilizes MediaPipe for robust hand landmark detection.
 - **Deep Learning Model:** Powered by a TensorFlow/Keras model trained on ASL landmarks.
-- **Responsive UI:** Modern, user-friendly interface built with Tailwind CSS.
+- **Responsive UI:** Modern and user-friendly interface.
 
 ## 🛠️ Tech Stack
 
@@ -21,7 +21,6 @@ A real-time American Sign Language (ASL) alphabet translator application that us
 
 ### Frontend
 - **Core:** HTML5, Vanilla JavaScript
-- **Styling:** Tailwind CSS (via CDN)
 - **Communication:** WebSockets
 
 ## 📂 Project Structure
