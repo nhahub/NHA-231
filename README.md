@@ -28,28 +28,7 @@ This project consists of three main components:
 - Captures frames from webcam and predicts ASL letters.
 - Displays predictions with live confidence levels.
 
----
 
-## Project Structure
-```
-asl-recognition/
-│
-├── app.py                          # Streamlit web application (Word Builder)
-├── train_asl_model.py              # Model training script
-├── test_webcam_asl.py              # Real-time webcam recognition script
-├── requirements.txt                # Required dependencies
-├── README.md                       # Project documentation (this file)
-│
-├── Models/
-│   ├── asl_landmarks_final.h5      # Trained model (99.07% accuracy)
-│   └── asl_landmarks_classes.pkl   # Saved label encoder classes
-│
-└── dataset/
-    ├── asl_alphabet_train/         # Training data (A-Z)
-    └── asl_alphabet_test/          # Test images
-```
-
----
 
 ## System Requirements
 
@@ -66,8 +45,8 @@ asl-recognition/
 
 ### Step 1: Clone the Repository
 ```bash
-git clone <repository-url>
-cd asl-recognition
+git clone -b streamlit-deploy https://github.com/MazenArafat123/Sign-language-detector.git
+cd Sign-language-detector
 ```
 
 ### Step 2: Create Virtual Environment
@@ -76,7 +55,7 @@ It is recommended to use a virtual environment to manage dependencies and avoid 
 
 **For Windows:**
 ```bash
-python -m venv venv
+python -m venv venv <or choose a name for your virtual environment >
 venv\Scripts\activate
 ```
 
@@ -107,6 +86,7 @@ Ensure your model files are in the correct directory:
 Models/
 ├── asl_landmarks_final.h5
 └── asl_landmarks_classes.pkl
+└── asl_landmarks_best.h5
 ```
 
 Update the paths in `app.py` if necessary:
@@ -231,44 +211,7 @@ $$\mathbf{F} = [x_1, y_1, z_1, \; x_2, y_2, z_2, \; \dots, \; x_{21}, y_{21}, z_
 
 This approach captures the hand's shape and pose numerically, enabling accurate gesture recognition.
 
----
 
-## Training the Model
-
-The training script:
-
-- Extracts 21 × 3 = 63 landmark features per image using MediaPipe Hands.
-- Trains a fully connected neural network with batch normalization and dropout.
-- Saves the best model as `asl_landmarks_final.h5` and the class labels as `asl_landmarks_classes.pkl`.
-
-### Steps
-
-1. Ensure your dataset is in the correct directory structure:
-```
-   dataset/
-   ├── asl_alphabet_train/
-   │   ├── A/
-   │   ├── B/
-   │   └── ...
-   └── asl_alphabet_test/
-       ├── A/
-       ├── B/
-       └── ...
-```
-
-2. Run:
-```bash
-   python train_asl_model.py
-```
-
-3. After training, you should see output similar to:
-```
-   Model and classes saved successfully!
-   Final Validation Accuracy: 99.07%
-   Final Validation Loss: 0.0334
-```
-
----
 
 ## Usage
 
@@ -303,7 +246,7 @@ streamlit run app.py
 
 For quick testing without the web interface:
 ```bash
-python test_webcam_asl.py
+python "Webcam Test\test.py"
 ```
 
 Press 'q' to quit.
@@ -317,7 +260,7 @@ Press 'q' to quit.
 - **Final Validation Accuracy:** 99.07%
 - **Final Validation Loss:** 0.0334
 - **Training Dataset:** ASL Alphabet dataset from Kaggle
-- **Number of Classes:** 28 (A-Z + SPACE + DEL)
+- **Number of Classes:** 28 (A-Z + SPACE + DEL + NOTHING)
 - **Total Parameters:** 61,148
 
 ### Real-Time Performance
@@ -335,7 +278,7 @@ Press 'q' to quit.
 
 1. MediaPipe Hands detects the hand and extracts 21 3D landmarks.
 2. The x, y, z coordinates are flattened into a 63-dimensional vector.
-3. This vector is fed into the trained Neural Network model.
+3. This vector is fed into the trained Neural Network model (MLP).
 4. The model predicts the ASL alphabet letter with confidence score.
 5. Prediction smoothing uses a rolling average to reduce noise.
 
@@ -356,14 +299,13 @@ Press 'q' to quit.
 - Integration with sentence recognition or continuous signing.
 - Convert model to TensorFlow Lite for mobile deployment.
 - Multi-language support beyond ASL.
-- Text-to-speech output for completed words.
 - Gesture-based UI navigation.
 
 ---
 
 ## Acknowledgments
 
-- **ASL Alphabet Dataset** from Kaggle (grassknoted/asl-alphabet).
+- **ASL Alphabet Dataset** https://www.kaggle.com/datasets/grassknoted/asl-alphabet.
 - **MediaPipe** by Google for hand tracking technology.
 - **TensorFlow** for deep learning framework.
 - **Streamlit** for the interactive web application framework.
