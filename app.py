@@ -283,7 +283,7 @@ if model is not None and class_names is not None:
     with col_start:
         start_button = st.button("Start Camera", type="primary")
     with col_stop:
-        stop_button = st.button("Stop Camera", use_container_width=True)
+        stop_button = st.button("Stop Camera")
     
     if start_button:
         st.session_state.camera_running = True
