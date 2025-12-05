@@ -101,6 +101,93 @@ The server will start on `http://0.0.0.0:8080`.
 3.  Wait for the connection status to turn **Green** ("Connected").
 4.  Start signing! The predicted characters will appear on the screen, and you can build sentences.
 
+# 🌐 Running the Application Using Ngrok (Tunneling Mode)
+
+If you want the deployed frontend on **GitHub Pages** to communicate with your locally running backend, you must expose your local server using **Ngrok**.
+This allows external clients (like your GitHub Pages site) to connect to your machine securely.
+
+### ✔️ 1. Download & Place `ngrok.exe`
+1. Download ngrok from the official website:
+   https://ngrok.com/download
+2. Place the downloaded `ngrok.exe` file **inside the project root directory**, next to:
+```text
+DEPI_Final/
+├─ ngrok.exe
+├─ app/
+├─ Models/
+├─ WebApp/
+└─ server.py
+```
+
+---
+
+### ✔️ 2. Authenticate Ngrok
+Open a terminal in the project root and run:
+
+```bash
+./ngrok.exe config add-authtoken <YOUR_NGROK_AUTH_TOKEN>
+```
+Replace `<YOUR_NGROK_AUTH_TOKEN>` with the token from your Ngrok dashboard.
+
+### ✔️ 3. Start Ngrok Tunnel
+Still in the root directory, run:
+
+```bash
+./ngrok.exe http 8080
+```
+Ngrok will generate a public HTTPS/WebSocket-safe URL like:
+
+```text
+https://extranuclear-tiara-semimalignantly.ngrok-free.dev
+```
+Copy the URL shown under Forwarding.
+
+### ✔️ 4. Update the Frontend (WebSocket URL)
+In your deployed or local `index.html`, ensure the following line points to your Ngrok tunnel:
+
+```javascript
+const WEBSOCKET_URL = "wss://extranuclear-tiara-semimalignantly.ngrok-free.dev/sign-model";
+```
+**Important:**
+Always use `wss://` (secure WebSocket) with Ngrok, not `ws://`.
+
+### ✔️ 5. Start the Backend Server
+Open a new terminal window and run the backend while Ngrok is still running:
+
+**Using uv:**
+
+```bash
+uv run app/server.py
+```
+
+**Or using Python directly:**
+
+```bash
+python app/server.py
+```
+
+It will start at:
+
+```text
+http://0.0.0.0:8080
+```
+
+### ✔️ 6. Open the Deployed Frontend (GitHub Pages)
+Your frontend is already deployed at:
+
+🔗 https://samyadel123.github.io/DEPI_Final/
+
+**Now:**
+
+1. Open the link
+2. Allow camera access
+3. Wait for the status indicator to turn **Green** ("Connected")
+4. Begin signing — predictions will appear in real-time
+
+### 🎉 You're All Set!
+Your GitHub Pages frontend is now successfully connected to your local backend through Ngrok, enabling real-time sign language detection anywhere on the web.
+
+
 ## 🧠 Model Details
 
 The system uses a custom-trained Neural Network that processes hand landmarks extracted by MediaPipe.
@@ -112,8 +199,6 @@ The system uses a custom-trained Neural Network that processes hand landmarks ex
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## 📄 License
-
 - Built by:
 
   - Samy Adel
@@ -124,4 +209,29 @@ Contributions are welcome! Please feel free to submit a Pull Request.
   - Youssef Mustafa
   - Kirollos Safwat
 
-- Uses open-source libraries: TensorFlow, FastAPI, MediaPipe, etc.
+## Team members roles:
+
+### Samy Adel & Ahmed Salah:
+
+- Real-Time Analysis: Investigated why CNN and MobileNetV2 failed in real-time and proposed switching to a MediaPipe + MLP pipeline.
+- MLflow Integration: Set up MLflow to track experiments, metrics, and model versions for full reproducibility.
+- Deployment Implementation: Built both the frontend (index.html) and backend (server.py) with WebSockets for real-time communication.
+- Hosting & Tunneling: Deployed the frontend on GitHub Pages and used ngrok to create a tunnel linking the browser to the backend.
+- Future Research: Started experimenting with a MediaPipe + RNN model to support dynamic gesture recognition.
+
+### Mazen Arafat & Fouad Ramzy & Kirollos Safwat
+
+- Applied landmarks approach and trained MLP Model
+- Made deployment using streamlit
+- Prepared Presentation
+- Worked on Report
+
+### Mahmoud Elsherbiny & Youssef Mustafa
+
+- Trained CNN Model
+- Trained MobileNetV2 Model
+- Made comparison between Models
+- Worked on Report
+
+
+> Uses open-source libraries: TensorFlow, FastAPI, MediaPipe, etc.
